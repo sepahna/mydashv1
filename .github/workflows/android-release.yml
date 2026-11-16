@@ -31,8 +31,14 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
+      - name: Align Expo SDK dependencies
+        run: npx expo install --fix
+
+      - name: Validate Expo project
+        run: npx expo-doctor
+
       - name: Generate Android project
-        run: npx expo prebuild --platform android --no-install
+        run: npx expo prebuild --clean --platform android --no-install
 
       - name: Configure release signing for test APK
         run: |
@@ -55,7 +61,7 @@ jobs:
 
       - name: Build release APK
         working-directory: android
-        run: ./gradlew assembleRelease
+        run: ./gradlew --no-daemon --stacktrace assembleRelease
 
       - name: Prepare APK
         run: |
