@@ -1,0 +1,79 @@
+name: Android APK Release
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Generate Android project
+        run: npx expo prebuild --platform android --no-install
+
+      - name: Configure installable release signing
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("android/app/build.gradle")
+          s = p.read_text()
+          marker = "buildTypes {"
+          start = s.find(marker)
+          if start < 0:
+              raise SystemExit("Could not find Android buildTypes block")
+          release = s.find("release {", start)
+          if release < 0:
+              raise SystemExit("Could not find release build type")
+          insert_at = release + len("release {")
+          if "signingConfig signingConfigs.debug" not in s[insert_at:insert_at+500]:
+              s = s[:insert_at] + "\n            signingConfig signingConfigs.debug" + s[insert_at:]
+          p.write_text(s)
+          PY
+
+      - name: Build release APK
+        working-directory: android
+        run: ./gradlew assembleRelease
+
+      - name: Prepare APK
+        run: |
+          mkdir -p release
+          cp android/app/build/outputs/apk/release/app-release.apk release/MyDash-v1.0.0.apk
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MyDash-Android-APK
+          path: release/MyDash-v1.0.0.apk
+          retention-days: 30
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.0
+          name: MyDash v1.0.0
+          generate_release_notes: true
+          files: release/MyDash-v1.0.0.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
