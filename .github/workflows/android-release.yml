@@ -34,6 +34,9 @@ jobs:
       - name: Align Expo SDK dependencies
         run: npx expo install --fix
 
+      - name: Install Expo font peer dependency
+        run: npx expo install expo-font && npm dedupe
+
       - name: Validate Expo project
         run: npx expo-doctor
 
