@@ -2,7 +2,7 @@ name: Android APK Release
 
 on:
   push:
-    branches: [main, master]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -18,8 +18,9 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
+          cache-dependency-path: package.json
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -28,12 +29,12 @@ jobs:
           java-version: '17'
 
       - name: Install dependencies
-        run: npm install
+        run: npm install --no-audit --no-fund
 
       - name: Generate Android project
         run: npx expo prebuild --platform android --no-install
 
-      - name: Configure installable release signing
+      - name: Configure release signing for test APK
         run: |
           python3 - <<'PY'
           from pathlib import Path
